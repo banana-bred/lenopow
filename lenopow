@@ -7,14 +7,14 @@
 
 # -- works on artix B^)
 
-readonly VERSION=1.0.4
-readonly BATTERY_PROTECTION='/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode'
-readonly BATTERY_PROTECTION_ON=1
-readonly BATTERY_PROTECTION_OFF=0
-readonly BRIGHTNESS='/sys/class/backlight/amdgpu_bl0/brightness'
-readonly BRIGHTNESS_MIN=0
-readonly BRIGHTNESS_MAX=$(cat '/sys/class/backlight/amdgpu_bl0/max_brightness')
-readonly PROGRAM="${0##*/}"
+local VERSION=1.0.4
+local BATTERY_PROTECTION='/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode'
+local BATTERY_PROTECTION_ON=1
+local BATTERY_PROTECTION_OFF=0
+local BRIGHTNESS='/sys/class/backlight/amdgpu_bl0/brightness'
+local BRIGHTNESS_MIN=0
+local BRIGHTNESS_MAX=$(cat '/sys/class/backlight/amdgpu_bl0/max_brightness')
+local PROGRAM="${(%):-%x}"
 
 usage() {
     # Prints general usage of the script.
@@ -27,7 +27,7 @@ usage() {
     -s               Show battery protection status and current brightness.
     -e               Enable battery protection (charge level 55-60%).
     -d               Disable battery protection (charge level 100%).
-    -b <brightness>  Set backlight brightness, default 100
+		-b <brightness>  Set backlight brightness, defaults to max value
 EOF
 }
 
@@ -46,9 +46,9 @@ die() {
 brightness_show() {
 	# -- Shows backlight brightness setting
 
-	local status="$(cat "${BRIGHTNESS}")"
+	local brit="$(cat "${BRIGHTNESS}")"
 
-	echo "Backlight brightness set at "${status}"/"${BRIGHTNESS_MAX}
+	echo "Backlight brightness set at "${brit}"/"${BRIGHTNESS_MAX} || (echo "Can't determine brightness setting" && exit 1)
 
 }
 
@@ -59,7 +59,9 @@ brightness_store() {
 	local store="$1"
 	local bright="$(cat "${BRIGHTNESS}")"
 
-	[[ "${store}" -eq "${bright}" ]] && echo "Brightness already set to ${store}" && exit 0
+	[[ "${store}" -ge "${bright}" ]] &&
+		( [[ "${bright}" -eq "${BRIGHTNESS_MAX}" ]] && echo "Brightness already set to max" ||
+			( [[ "${store}"  -eq "${bright} " ]] && echo "Brightness already set to ${store}/${BRIGHTNESS_MAX}" ) ) && exit 0
 
 	if [[ "${store}" -ge "${BRIGHTNESS_MAX}" ]] ; then
 		bright=${BRIGHTNESS_MAX}
@@ -71,22 +73,20 @@ brightness_store() {
 		die "Brightness '${bright}' could not be set in 'brightness_store()'"
 	fi
 
-	echo "Setting brightness to ${bright}" && sudo bash -c "echo '${bright}' > '${BRIGHTNESS}'"
+	[[ "${bright}" -eq "${BRIGHTNESS_MAX}" ]] && echo "Setting brightness to max" && sudo zsh -c "echo '${bright}' > '${BRIGHTNESS}'" ||
+		echo "Setting brightness to ${bright}/${BRIGHTNESS_MAX}" && sudo zsh -c "echo '${bright}' > '${BRIGHTNESS}'"
 
 }
 
 battery_protection_show() {
   # Shows battery protection status based on $BATTERY_PROTECTION value.
 
-  local status="$(cat "${BATTERY_PROTECTION}")"
+  local batt="$(cat "${BATTERY_PROTECTION}")"
 
-  if [[ "${status}" -eq "${BATTERY_PROTECTION_ON}" ]]; then
-      echo "Battery protection: ENABLED"
-  elif [[ "${status}" -eq "${BATTERY_PROTECTION_OFF}" ]]; then
-      echo "Battery protection: DISABLED"
-  else
-      echo "Battery protection: UNKNOWN"
-  fi
+  [[ "${batt}" -eq "${BATTERY_PROTECTION_ON}" ]]  && echo "Battery protection: ENABLED"  ||
+		( [[ "${batt}" -eq "${BATTERY_PROTECTION_OFF}" ]] && echo "Battery protection: DISABLED" ) ||
+		( echo "Battery protection: UNKNOWN" && exit 1 )
+
 }
 
 battery_protection_store() {
@@ -99,13 +99,14 @@ battery_protection_store() {
 
   if [[ "${store}" -eq "${BATTERY_PROTECTION_ON}" ]]; then
       echo 'Battery protection enabled (charge level 55-60%)'
-      sudo bash -c "echo '${store}' >'${BATTERY_PROTECTION}'"
+      sudo zsh -c "echo '${store}' >'${BATTERY_PROTECTION}'"
   elif [[ "${store}" -eq "${BATTERY_PROTECTION_OFF}" ]]; then
       echo 'Battery protection disabled (charge level 100%)'
-      sudo bash -c "echo '${store}' >'${BATTERY_PROTECTION}'"
+      sudo zsh -c "echo '${store}' >'${BATTERY_PROTECTION}'"
   else
       die "Invalid value encountered in 'battery_protection_store()'"
   fi
+
 }
 
 main() {
@@ -119,36 +120,40 @@ main() {
 		case "${key}" in
 		h)
 				usage
+				exit 0
 				;;
 		v)
 				echo "${PROGRAM} v${VERSION}"
 				;;
 		s)
-				battery_protection_show
 				brightness_show
+				battery_protection_show
 				;;
 		b)
 				bright="${OPTARG}"
 				brightness_store "${bright}"
-				;;
-		:)
-			[[ "${OPTARG}" -eq "b" ]]
-				brightness_store "${bright}"
+				exit 0
 				;;
 		e)
 				battery_protection_store "${BATTERY_PROTECTION_ON}"
+				exit 0
 				;;
 		d)
 				battery_protection_store "${BATTERY_PROTECTION_OFF}"
+				exit 0
+				;;
+		:)
+				[[ "${OPTARG}" -eq "b" ]] && brightness_store "${bright}"
 				;;
 		\?)
-				die "Invaild operation '${key}'. See '${PROGRAM} -h' for help."
+				die "Invaild operation '${key}'. See '${PROGRAM} -h' for help." 1>&2
+				exit 1
 				;;
 		esac
 
 	done
 
-	[[ -z "${key}" ]] && die "No operation specified. See '${PROGRAM} -h' for help."
+	[[ -z "${key}" ]] && die "No operation specified. See '${PROGRAM} -h' for help." 1>&2 && exit 1
 
 }
 
