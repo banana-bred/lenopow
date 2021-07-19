@@ -1,103 +1,155 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 # Maintainer: Helmut Stult <helmut[at]manjaro[dot]org>
 
 # Based on the code from:
 # Lenovsky    <lenovsky@pm.me>
 
+# -- works on artix B^)
+
 readonly VERSION=1.0.4
 readonly BATTERY_PROTECTION='/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode'
 readonly BATTERY_PROTECTION_ON=1
 readonly BATTERY_PROTECTION_OFF=0
+readonly BRIGHTNESS='/sys/class/backlight/amdgpu_bl0/brightness'
+readonly BRIGHTNESS_MIN=0
+readonly BRIGHTNESS_MAX=$(cat '/sys/class/backlight/amdgpu_bl0/max_brightness')
+readonly PROGRAM="${0##*/}"
 
 usage() {
     # Prints general usage of the script.
 
     cat <<EOF
-    usage: ${0##*/} [operation]
+    usage: ${PROGRAM}  [operation]
     operations:
-    -h, --help        Show this message.
-    -v, --version     Show script version.
-    -s, --status      Show battery protection status.
-    -e, --enable      Enable battery protection (charge level 55-60%).
-    -d, --disable     Disable battery protection (charge level 100%).
+    -h               Show this message.
+    -v               Show script version.
+    -s               Show battery protection status and current brightness.
+    -e               Enable battery protection (charge level 55-60%).
+    -d               Disable battery protection (charge level 100%).
+    -b <brightness>  Set backlight brightness, default 100
 EOF
 }
 
 die() {
-    # Raises an error message and exits.
-    # param: $1: $error_message: error message
+  # Raises an error message and exits.
+  # param: $1: $error_message: error message
 
-    local exit_code=1
-    local error_message="$1"
+  local exit_code=1
+  local error_message="$1"
 
-    echo "${0##*/}: ${error_message}" 1>&2
+	echo "${PROGRAM}: ${error_message}" 1>&2
 
-    exit "${exit_code}"
+  exit "${exit_code}"
+}
+
+brightness_show() {
+	# -- Shows backlight brightness setting
+
+	local status="$(cat "${BRIGHTNESS}")"
+
+	echo "Backlight brightness set at "${status}"/"${BRIGHTNESS_MAX}
+
+}
+
+brightness_store() {
+	# -- Stores value in $BRIGHTNESS
+  # -- param: $1: $store: values for $BRIGHTNESS, where:
+
+	local store="$1"
+	local bright="$(cat "${BRIGHTNESS}")"
+
+	[[ "${store}" -eq "${bright}" ]] && echo "Brightness already set to ${store}" && exit 0
+
+	if [[ "${store}" -ge "${BRIGHTNESS_MAX}" ]] ; then
+		bright=${BRIGHTNESS_MAX}
+	elif [[ "${store}" -le "${BRIGHTNESS_MIN}" ]] ; then
+		bright=${BRIGHTNESS_MIN}
+	elif [[ "${store}" -gt "${BRIGHTNESS_MIN}" && "${store}" -lt "${BRIGHTNESS_MAX}" ]] ; then
+		bright=${store}
+	else
+		die "Brightness '${bright}' could not be set in 'brightness_store()'"
+	fi
+
+	echo "Setting brightness to ${bright}" && sudo bash -c "echo '${bright}' > '${BRIGHTNESS}'"
+
 }
 
 battery_protection_show() {
-    # Shows battery protection status based on $BATTERY_PROTECTION value.
+  # Shows battery protection status based on $BATTERY_PROTECTION value.
 
-    local status="$(cat "${BATTERY_PROTECTION}")"
+  local status="$(cat "${BATTERY_PROTECTION}")"
 
-    if [[ "${status}" -eq "${BATTERY_PROTECTION_ON}" ]]; then
-        echo "Battery protection: ENABLED"
-    elif [[ "${status}" -eq "${BATTERY_PROTECTION_OFF}" ]]; then
-        echo "Battery protection: DISABLED"
-    else
-        echo "Battery protection: UNKNOWN"
-    fi
+  if [[ "${status}" -eq "${BATTERY_PROTECTION_ON}" ]]; then
+      echo "Battery protection: ENABLED"
+  elif [[ "${status}" -eq "${BATTERY_PROTECTION_OFF}" ]]; then
+      echo "Battery protection: DISABLED"
+  else
+      echo "Battery protection: UNKNOWN"
+  fi
 }
 
 battery_protection_store() {
-    # Stores value in $BATTERY_PROTECTION
-    # param: $1: $store: values for $BATTERY_PROTECTION, where:
-    #   * 1 -> enabled
-    #   * 0 -> disabled
+  # Stores value in $BATTERY_PROTECTION
+  # param: $1: $store: values for $BATTERY_PROTECTION, where:
+  #   * 1 -> enabled
+  #	* 0 -> disabled
 
-    local store="$1"
+  local store="$1"
 
-    if [[ "${store}" -eq "${BATTERY_PROTECTION_ON}" ]]; then
-        echo 'Battery protection enabled (charge level 55-60%)'
-        sudo bash -c "echo '${store}' >'${BATTERY_PROTECTION}'"
-    elif [[ "${store}" -eq "${BATTERY_PROTECTION_OFF}" ]]; then
-        echo 'Battery protection disabled (charge level 100%)'
-        sudo bash -c "echo '${store}' >'${BATTERY_PROTECTION}'"
-    else
-        die "Invalid value encountered in 'battery_protection_store()'"
-    fi
+  if [[ "${store}" -eq "${BATTERY_PROTECTION_ON}" ]]; then
+      echo 'Battery protection enabled (charge level 55-60%)'
+      sudo bash -c "echo '${store}' >'${BATTERY_PROTECTION}'"
+  elif [[ "${store}" -eq "${BATTERY_PROTECTION_OFF}" ]]; then
+      echo 'Battery protection disabled (charge level 100%)'
+      sudo bash -c "echo '${store}' >'${BATTERY_PROTECTION}'"
+  else
+      die "Invalid value encountered in 'battery_protection_store()'"
+  fi
 }
 
 main() {
-    # Parses command-line arguments in order to perform the stuff.
-    # param: $1: $key: key to the stuff
+  # Parses command-line arguments in order to perform the stuff.
+  # param: $key: keys to the stuff
 
-    local key="$1"
+	local bright="${BRIGHTNESS_MAX}"
 
-    case "${key}" in
-    -h | --help)
-        usage
-        ;;
-    -v | --version)
-        echo "${0##*/} v${VERSION}"
-        ;;
-    -s | --status)
-        battery_protection_show
-        ;;
-    -e | --enable)
-        battery_protection_store "${BATTERY_PROTECTION_ON}"
-        ;;
-    -d | --disable)
-        battery_protection_store "${BATTERY_PROTECTION_OFF}"
-        ;;
-    "")
-        die "No operation specified. See '${0##*/} --help'."
-        ;;
-    *)
-        die "Invaild operation '${key}'. See '${0##*/} --help'."
-        ;;
-    esac
+  while getopts ":b:hvsed" key ; do
+
+		case "${key}" in
+		h)
+				usage
+				;;
+		v)
+				echo "${PROGRAM} v${VERSION}"
+				;;
+		s)
+				battery_protection_show
+				brightness_show
+				;;
+		b)
+				bright="${OPTARG}"
+				brightness_store "${bright}"
+				;;
+		:)
+			[[ "${OPTARG}" -eq "b" ]]
+				brightness_store "${bright}"
+				;;
+		e)
+				battery_protection_store "${BATTERY_PROTECTION_ON}"
+				;;
+		d)
+				battery_protection_store "${BATTERY_PROTECTION_OFF}"
+				;;
+		\?)
+				die "Invaild operation '${key}'. See '${PROGRAM} -h' for help."
+				;;
+		esac
+
+	done
+
+	[[ -z "${key}" ]] && die "No operation specified. See '${PROGRAM} -h' for help."
+
 }
 
 main "$@"

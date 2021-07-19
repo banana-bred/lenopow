@@ -15,13 +15,13 @@ The standard `make install` routine is used.
 
 The following additional variables are supported:
 - `DESTDIR` -- determines environment for staged installs,
-- `PREFIX`  -- determines where the script will be installed (default: `/usr/local`).
+- `PREFIX`  -- determines where the script will be installed (default: `$HOME/.local`).
 
 
 ## Requirements
 
 The script requires the following to run:
-- `bash`
+- `zsh`
 - `linux >= 4.14`
 
 
@@ -29,13 +29,14 @@ The script requires the following to run:
 
 Run: `lenopow [operation]`
 
-| Operation        | Description                                              |
-| :--------------- | :------------------------------------------------------- |
-| `-h`, `--help`     |  Show help message.                                      |
-| `-v`, `--version`  |  Show script version.                                    |
-| `-s`, `--status`   |  Show battery protection status.                         |
-| `-e`, `--enable`   |  Enable battery protection (charge level 55-60%).        |
-| `-d`, `--disable`  |  Disable battery protection (charge level 100%).         |
+| Operation                       | Description                                              |
+| :------------------------------ | :------------------------------------------------------- |
+| `-h, --help                     | Show this message.                                       |
+| `-v, --version                  | Show script version.                                     |
+| `-s, --status                   | Show battery protection status and current brightness.   |
+| `-e, --enable                   | Enable battery protection (charge level 55-60%).         |
+| `-d, --disable                  | Disable battery protection (charge level 100%).          |
+| `-b, --brightness <brightness>  | Set backlight brightness, default 100                    |
 
 
 ## License
