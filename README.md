@@ -31,12 +31,12 @@ Run: `lenopow [operation]`
 
 | Operation                       | Description                                              |
 | :------------------------------ | :------------------------------------------------------- |
-| `-h, --help                     | Show this message.                                       |
-| `-v, --version                  | Show script version.                                     |
-| `-s, --status                   | Show battery protection status and current brightness.   |
-| `-e, --enable                   | Enable battery protection (charge level 55-60%).         |
-| `-d, --disable                  | Disable battery protection (charge level 100%).          |
-| `-b, --brightness <brightness>  | Set backlight brightness, default 100                    |
+| `-h              | Show this message.                                       |
+| `-v              | Show script version.                                     |
+| `-s              | Show battery protection status and current brightness.   |
+| `-e              | Enable battery protection (charge level 55-60%).         |
+| `-d              | Disable battery protection (charge level 100%).          |
+| `-b <brightness> | Set backlight brightness, default 100                    |
 
 
 ## License
