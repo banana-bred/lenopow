@@ -1,6 +1,6 @@
 # lenopow
 
->Lenovo Ideapad/LEGION battery conservation mode on Manjaro Linux
+>Lenovo Ideapad/LEGION battery conservation mode on Manjaro Linux, Artix Linux, and possibly most Arch-based distributions
 
 **lenopow** allows managing Lenovo Ideapad's/LEGION's firmware on the battery
 and shifts between the usual charging thresholds from 95/100% to 55/60%.
