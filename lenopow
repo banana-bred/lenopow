@@ -5,10 +5,11 @@
 # Based on the code from:
 # Lenovsky    <lenovsky@pm.me>
 
-local VERSION=1.2.0
+local VERSION=1.2.1
 local BATTERY_PROTECTION='/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode'
 local BATTERY_PROTECTION_ON=1
 local BATTERY_PROTECTION_OFF=0
+local BATTERY_PROTECTION_CURRENT=$(cat "${BATTERY_PROTECTION}")
 local BACKLIGHT_DIR="/sys/class/backlight/$(ls /sys/class/backlight)"
 local BRIGHTNESS="${BACKLIGHT_DIR}/brightness"
 local BRIGHTNESS_MIN=0
@@ -134,10 +135,12 @@ main() {
 				exit 0
 				;;
 		e)
+				[[ "${BATTERY_PROTECTION_ON}" -eq "${BATTERY_PROTECTION_CURRENT}" ]] && echo "Batter protection already enabled" && exit 0 ||
 				battery_protection_store "${BATTERY_PROTECTION_ON}"
 				exit 0
 				;;
 		d)
+				[[ "${BATTERY_PROTECTION_OFF}" -eq "${BATTERY_PROTECTION_CURRENT}" ]] && echo "Batter protection already disabled" && exit 0 ||
 				battery_protection_store "${BATTERY_PROTECTION_OFF}"
 				exit 0
 				;;
