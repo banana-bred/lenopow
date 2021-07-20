@@ -9,7 +9,7 @@ the overall lifespan of the battery. This setting is suggested for a system
 that is always plugged into the AC adapter.
 
 
-## Instalation
+## Installation
 
 The standard `make install` routine is used.
 
@@ -36,7 +36,7 @@ Run: `lenopow [operation]`
 | `-s`                            | Show battery protection status and current brightness.   |
 | `-e`                            | Enable battery protection (charge level 55-60%).         |
 | `-d`                            | Disable battery protection (charge level 100%).          |
-| `-b` `BRIGHTNESS`               | Set backlight brightness, default to max                 |
+| `-b` `BRIGHTNESS`               | Set backlight brightness, default to max if not given    |
 
 
 ## License

@@ -5,15 +5,14 @@
 # Based on the code from:
 # Lenovsky    <lenovsky@pm.me>
 
-# -- works on artix B^)
-
-local VERSION=1.0.4
+local VERSION=1.2.0
 local BATTERY_PROTECTION='/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode'
 local BATTERY_PROTECTION_ON=1
 local BATTERY_PROTECTION_OFF=0
-local BRIGHTNESS='/sys/class/backlight/amdgpu_bl0/brightness'
+local BACKLIGHT_DIR="/sys/class/backlight/$(ls /sys/class/backlight)"
+local BRIGHTNESS="${BACKLIGHT_DIR}/brightness"
 local BRIGHTNESS_MIN=0
-local BRIGHTNESS_MAX=$(cat '/sys/class/backlight/amdgpu_bl0/max_brightness')
+local BRIGHTNESS_MAX=$(cat "${BACKLIGHT_DIR}"/max_brightness)
 local PROGRAM="${(%):-%x}"
 
 usage() {
@@ -46,9 +45,8 @@ die() {
 brightness_show() {
 	# -- Shows backlight brightness setting
 
-	local brit="$(cat "${BRIGHTNESS}")"
-
-	echo "Backlight brightness set at "${brit}"/"${BRIGHTNESS_MAX} || (echo "Can't determine brightness setting" && exit 1)
+	local brit
+	brit="$(cat "${BRIGHTNESS}")" && echo "Backlight brightness set at "${brit}"/"${BRIGHTNESS_MAX} || echo "error determining brightness"
 
 }
 
@@ -81,11 +79,12 @@ brightness_store() {
 battery_protection_show() {
   # Shows battery protection status based on $BATTERY_PROTECTION value.
 
-  local batt="$(cat "${BATTERY_PROTECTION}")"
+	local batt
+  batt="$(cat "${BATTERY_PROTECTION}")"
 
   [[ "${batt}" -eq "${BATTERY_PROTECTION_ON}" ]]  && echo "Battery protection: ENABLED"  ||
 		( [[ "${batt}" -eq "${BATTERY_PROTECTION_OFF}" ]] && echo "Battery protection: DISABLED" ) ||
-		( echo "Battery protection: UNKNOWN" && exit 1 )
+		( echo "Battery protection: UNKNOWN" )
 
 }
 
